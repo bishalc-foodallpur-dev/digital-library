@@ -1,14 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { supabase } from "@/lib/supabase";
 
 export default function Dashboard() {
+
   const [stats, setStats] = useState({
     totalPublications: 0,
     totalStock: 0,
@@ -19,115 +15,199 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setLoading(true);
-        setError("");
 
-        // 📚 Publications (only needed fields)
-        const { data: publications, error: pubError } = await supabase
+
+  useEffect(() => {
+
+    async function fetchStats() {
+
+      try {
+
+        setLoading(true);
+
+
+        // publications
+        const {
+          data: publications,
+          error: pubError
+        } = await supabase
           .from("publications")
           .select("total_quantity, available_quantity");
 
-        if (pubError) throw pubError;
 
-        // 👤 Users (only count needed)
-        const { count: userCount, error: userError } = await supabase
+        if (pubError) {
+          throw pubError;
+        }
+
+
+
+        // users
+        const {
+          count,
+          error: userError
+        } = await supabase
           .from("users")
-          .select("*", { count: "exact", head: true });
+          .select("*", {
+            count: "exact",
+            head: true
+          });
 
-        if (userError) throw userError;
+
+        if (userError) {
+          throw userError;
+        }
+
+
 
         let totalStock = 0;
         let availableStock = 0;
 
-        publications?.forEach((p: any) => {
-          totalStock += p.total_quantity || 0;
-          availableStock += p.available_quantity || 0;
+
+        publications?.forEach((item) => {
+
+          totalStock +=
+            item.total_quantity ?? 0;
+
+          availableStock +=
+            item.available_quantity ?? 0;
+
         });
+
+
 
         setStats({
-          totalPublications: publications?.length || 0,
+          totalPublications:
+            publications?.length ?? 0,
+
           totalStock,
+
           availableStock,
-          users: userCount || 0,
+
+          users:
+            count ?? 0,
         });
+
+
+
       } catch (err: any) {
-        console.error(err);
-        setError("Failed to load dashboard data");
+
+        console.error(
+          "Dashboard Error:",
+          err.message
+        );
+
+        setError(err.message);
+
       } finally {
+
         setLoading(false);
+
       }
-    };
+
+    }
+
 
     fetchStats();
+
+
   }, []);
+
+
 
   if (loading) {
     return (
       <div className="p-10">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="mt-5 text-gray-500">Loading stats...</p>
+        Loading dashboard...
       </div>
     );
   }
+
 
   if (error) {
     return (
       <div className="p-10">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="mt-5 text-red-500">{error}</p>
+
+        <h1 className="text-xl font-bold">
+          Dashboard Error
+        </h1>
+
+        <p className="text-red-500 mt-3">
+          {error}
+        </p>
+
       </div>
     );
   }
 
+
+
   return (
+
     <div className="p-10">
 
       <h1 className="text-3xl font-bold">
         Dashboard
       </h1>
 
-      <div className="grid grid-cols-2 gap-4 mt-5">
 
-        <div className="p-5 bg-blue-100 rounded">
-          <h2 className="text-lg font-semibold">
-            Total Publications
-          </h2>
-          <p className="text-2xl">
-            {stats.totalPublications}
-          </p>
-        </div>
+      <div className="grid grid-cols-2 gap-5 mt-6">
 
-        <div className="p-5 bg-green-100 rounded">
-          <h2 className="text-lg font-semibold">
-            Total Stock
-          </h2>
-          <p className="text-2xl">
-            {stats.totalStock}
-          </p>
-        </div>
 
-        <div className="p-5 bg-yellow-100 rounded">
-          <h2 className="text-lg font-semibold">
-            Available Stock
-          </h2>
-          <p className="text-2xl">
-            {stats.availableStock}
-          </p>
-        </div>
+        <Card
+          title="Publications"
+          value={stats.totalPublications}
+        />
 
-        <div className="p-5 bg-purple-100 rounded">
-          <h2 className="text-lg font-semibold">
-            Users
-          </h2>
-          <p className="text-2xl">
-            {stats.users}
-          </p>
-        </div>
+
+        <Card
+          title="Total Stock"
+          value={stats.totalStock}
+        />
+
+
+        <Card
+          title="Available Stock"
+          value={stats.availableStock}
+        />
+
+
+        <Card
+          title="Users"
+          value={stats.users}
+        />
+
 
       </div>
+
+
     </div>
+
+  );
+}
+
+
+
+function Card({
+  title,
+  value
+}: {
+  title:string;
+  value:number;
+}) {
+
+  return (
+
+    <div className="p-6 bg-gray-100 rounded">
+
+      <h2 className="font-semibold">
+        {title}
+      </h2>
+
+      <p className="text-3xl mt-2">
+        {value}
+      </p>
+
+    </div>
+
   );
 }
